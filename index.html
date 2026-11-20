@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f0d14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Cast Call">
+<title>Cast Call</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%AC%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0f0d14; --panel:#1a1722; --panel2:#24202f; --line:#332d42;
+    --text:#f3f0f7; --muted:#a39cb3; --gold:#f5c518; --gold-ink:#1b1500;
+    --red:#ff5a6e; --green:#3ddc97; --radius:16px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,sans-serif}
+  body{min-height:100dvh;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+    background:radial-gradient(1200px 600px at 50% -200px,#2b1f45 0%,transparent 60%),var(--bg)}
+  button{font:inherit;color:inherit;cursor:pointer;border:0}
+  .wrap{max-width:640px;margin:0 auto;padding:12px 16px 40px}
+
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0 14px}
+  h1{font-family:"Bebas Neue",Impact,sans-serif;font-weight:400;font-size:40px;letter-spacing:1px;margin:0;line-height:1}
+  h1 span{color:var(--gold)}
+  .stats{display:flex;gap:8px;align-items:center}
+  .pill{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px 12px;text-align:center;min-width:72px}
+  .pill small{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+  .pill b{font-size:20px;font-variant-numeric:tabular-nums}
+  .pill.score b{color:var(--gold)}
+  .icon{width:40px;height:40px;border-radius:50%;background:var(--panel);border:1px solid var(--line);font-weight:700;font-size:18px}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:12px}
+  .card h2{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:600;display:flex;justify-content:space-between}
+  .card h2 small{font-size:12px;text-transform:none;letter-spacing:0;color:var(--gold)}
+
+  .cast{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .cast li{display:flex;align-items:center;gap:10px;min-height:48px;padding:8px 10px;border-radius:12px;background:var(--panel2);border:1px solid transparent;font-weight:600;font-size:15px;line-height:1.2}
+  .cast li .n{flex:0 0 26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;background:var(--line);color:var(--muted)}
+  .cast li.hidden{color:transparent;text-shadow:0 0 9px rgba(255,255,255,.35);user-select:none}
+  .cast li.on{border-color:var(--gold);animation:pop .35s ease}
+  .cast li.on .n{background:var(--gold);color:var(--gold-ink)}
+  .cast li.late{color:var(--muted);border-color:var(--line)}
+  @keyframes pop{0%{transform:scale(.92);opacity:.3}100%{transform:scale(1);opacity:1}}
+
+  form.guess{display:flex;gap:8px;position:relative}
+  .field{flex:1;position:relative}
+  #guess{width:100%;height:52px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:0 14px;font-size:17px;outline:none}
+  #guess:focus{border-color:var(--gold)}
+  .btn{height:52px;padding:0 20px;border-radius:12px;background:var(--gold);color:var(--gold-ink);font-weight:700;font-size:16px}
+  .btn:disabled{opacity:.4}
+  #suggest{position:absolute;left:0;right:0;bottom:calc(100% + 6px);list-style:none;margin:0;padding:6px;background:#2c2738;border:1px solid var(--line);border-radius:12px;box-shadow:0 -10px 30px rgba(0,0,0,.45);z-index:5;max-height:300px;overflow:auto}
+  #suggest:empty{display:none}
+  #suggest button{display:block;width:100%;text-align:left;background:none;padding:12px 10px;border-radius:8px;font-size:16px}
+  #suggest button:active,#suggest button:hover{background:var(--line)}
+  .shake{animation:shake .4s}
+  @keyframes shake{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+
+  .hints{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .hint{min-height:64px;border-radius:12px;background:var(--panel2);border:1px dashed var(--line);padding:8px 10px;text-align:left;display:flex;flex-direction:column;justify-content:center;gap:3px}
+  .hint .k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;display:flex;justify-content:space-between}
+  .hint .k em{font-style:normal;color:var(--gold)}
+  .hint .v{font-weight:600;font-size:15px}
+  .hint.used{border-style:solid;border-color:#4a4260;cursor:default}
+  .hint.used .k em{display:none}
+  .hint.full{grid-column:1 / -1}
+  .pattern{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:17px;letter-spacing:2px;word-spacing:10px;white-space:normal;overflow-wrap:anywhere}
+
+  .wrong{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 12px}
+  .wrong span{background:rgba(255,90,110,.12);color:#ff9aa7;border:1px solid rgba(255,90,110,.35);border-radius:999px;padding:5px 11px;font-size:13px;text-decoration:line-through}
+  .link{background:none;color:var(--muted);text-decoration:underline;font-size:14px;padding:8px;display:block;margin:0 auto}
+
+  .overlay{position:fixed;inset:0;background:rgba(5,4,8,.78);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:20}
+  .overlay.hide{display:none}
+  .sheet{background:var(--panel);border:1px solid var(--line);border-radius:20px;width:100%;max-width:460px;max-height:calc(100dvh - 32px);overflow:auto;padding:20px;text-align:center;animation:pop .3s ease}
+  .sheet h2{font-family:"Bebas Neue",Impact,sans-serif;font-weight:400;font-size:34px;margin:12px 0 2px;line-height:1.05}
+  .sheet .meta{color:var(--muted);margin:0 0 10px;font-size:14px}
+  .result{font-weight:700;font-size:18px;margin:6px 0}
+  .result.win{color:var(--green)} .result.lose{color:var(--red)}
+  .big{font-family:"Bebas Neue",Impact,sans-serif;font-size:56px;color:var(--gold);line-height:1}
+  .poster{width:min(240px,62vw);aspect-ratio:2/3;margin:0 auto;border-radius:12px;overflow:hidden;background:var(--panel2);display:grid;place-items:center;box-shadow:0 18px 40px rgba(0,0,0,.5)}
+  .poster img{width:100%;height:100%;object-fit:cover;display:block}
+  .poster .ph{padding:16px;font-family:"Bebas Neue",Impact,sans-serif;font-size:30px;line-height:1.05;background:linear-gradient(160deg,#3a2a5c,#151020);width:100%;height:100%;display:grid;place-items:center}
+  .spinner{width:36px;height:36px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--gold);animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .endcast{list-style:none;padding:0;margin:12px 0;display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+  .endcast li{background:var(--panel2);border-radius:999px;padding:5px 11px;font-size:13px}
+  .endcast li.missed{color:var(--muted)}
+  .sheet .btn{width:100%;margin-top:8px}
+  .statline{color:var(--muted);font-size:13px;margin-top:12px}
+  .help{text-align:left}
+  .help h2{text-align:center}
+  .help li{margin:6px 0;line-height:1.4}
+  .credit{font-size:12px;color:var(--muted);margin-top:10px}
+  .credit a{color:var(--muted)}
+
+  #toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);background:#2c2738;border:1px solid var(--line);padding:10px 16px;border-radius:999px;font-weight:600;opacity:0;transition:.25s;pointer-events:none;z-index:30;white-space:nowrap}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  @media (min-width:700px){
+    .cast{grid-template-columns:1fr 1fr}
+    .hints{grid-template-columns:repeat(4,1fr)}
+    .hint.full{grid-column:1 / -1}
+  }
+  @media (max-width:360px){ .cast{grid-template-columns:1fr} h1{font-size:32px} .pill{min-width:62px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>CAST<span>CALL</span></h1>
+    <div class="stats">
+      <div class="pill score"><small>Score</small><b id="score">1000</b></div>
+      <div class="pill"><small>Guesses</small><b id="left">10</b></div>
+      <button class="icon" id="helpBtn" aria-label="How to play">?</button>
+    </div>
+  </header>
+
+  <section class="card">
+    <h2>Top-billed cast</h2>
+    <ol class="cast" id="cast"></ol>
+  </section>
+
+  <form class="card guess" id="guessForm" autocomplete="off">
+    <div class="field">
+      <ul id="suggest" role="listbox"></ul>
+      <input id="guess" type="text" placeholder="Name the movie…" enterkeyhint="go"
+             autocapitalize="words" autocorrect="off" spellcheck="false" aria-label="Your guess">
+    </div>
+    <button class="btn" id="guessBtn" type="submit">Guess</button>
+  </form>
+
+  <div class="wrong" id="wrong"></div>
+
+  <section class="card">
+    <h2>Hints <small>−50 each</small></h2>
+    <div class="hints" id="hints">
+      <button class="hint" data-k="genre"><span class="k">Genre <em>−50</em></span><span class="v">Tap to reveal</span></button>
+      <button class="hint" data-k="year"><span class="k">Release year <em>−50</em></span><span class="v">Tap to reveal</span></button>
+      <button class="hint" data-k="director"><span class="k">Director <em>−50</em></span><span class="v">Tap to reveal</span></button>
+      <button class="hint" data-k="letters"><span class="k">Letter pattern <em>−50</em></span><span class="v">Tap to reveal</span></button>
+    </div>
+  </section>
+
+  <button class="link" id="giveUp">Give up</button>
+</div>
+
+<div class="overlay hide" id="end">
+  <div class="sheet">
+    <div class="poster" id="poster"><div class="spinner"></div></div>
+    <h2 id="endTitle"></h2>
+    <p class="meta" id="endMeta"></p>
+    <div class="result" id="endResult"></div>
+    <div class="big" id="endScore"></div>
+    <ul class="endcast" id="endCast"></ul>
+    <button class="btn" id="again">Play again</button>
+    <div class="statline" id="statLine"></div>
+    <div class="credit" id="posterCredit"></div>
+  </div>
+</div>
+
+<div class="overlay hide" id="help">
+  <div class="sheet help">
+    <h2>How to play</h2>
+    <ol>
+      <li>A random movie is picked and its <b>top 10 billed actors</b> are hidden.</li>
+      <li>The first actor is revealed. Guess the movie!</li>
+      <li>You start with <b>1000 points</b> and get <b>10 guesses</b>.</li>
+      <li>Each wrong guess costs <b>100 points</b> and reveals the next actor.</li>
+      <li>Hints cost <b>50 points</b> each: genre, release year, director, or the title's letter pattern (e.g. <span class="pattern">*** **********</span>).</li>
+      <li>Win or lose, the poster is revealed at the end.</li>
+    </ol>
+    <button class="btn" id="helpClose">Let's play</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="movies.js"></script>
+<script>
+(() => {
+  const MAX_GUESSES = 10, START_SCORE = 1000, WRONG_COST = 100, HINT_COST = 50, CAST_SIZE = 10;
+  const $ = (s) => document.querySelector(s);
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+  };
+
+  // ---------- text helpers ----------
+  const norm = (s) => String(s)
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/['\u2019.]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .replace(/^(the|a|an) /, '');
+  const pattern = (s) => s.replace(/[\p{L}\p{N}]/gu, '*');
+
+  // ---------- data ----------
+  const MOVIES = (window.MOVIES || []).filter(m => m && m.t && Array.isArray(m.c) && m.c.length >= 3);
+  const titleIndex = (() => {
+    const seen = new Map();
+    for (const m of MOVIES) for (const t of [m.t, ...(m.a || [])]) {
+      const n = norm(t);
+      if (n && !seen.has(n)) seen.set(n, t);
+    }
+    return [...seen].map(([n, label]) => ({ n, label }));
+  })();
+
+  let st = null, posterPromise = null, toastTimer = null;
+
+  function toast(msg) {
+    const el = $('#toast'); el.textContent = msg; el.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 1800);
+  }
+
+  function pickMovie() {
+    const key = (m) => m.id || (m.t + '|' + m.y);
+    const recent = store.get('cc_recent', []);
+    let pool = MOVIES.filter(m => !recent.includes(key(m)));
+    if (!pool.length) pool = MOVIES;
+    const m = pool[Math.floor(Math.random() * pool.length)];
+    recent.push(key(m));
+    store.set('cc_recent', recent.slice(-Math.min(300, Math.floor(MOVIES.length / 2))));
+    return m;
+  }
+
+  function newGame() {
+    const m = pickMovie();
+    st = { m, cast: m.c.slice(0, CAST_SIZE), revealed: 1, wrong: [], score: START_SCORE, hints: {}, over: false };
+    posterPromise = findPoster(m);
+    $('#guess').value = ''; $('#suggest').innerHTML = '';
+    $('#end').classList.add('hide');
+    render(true);
+  }
+
+  // ---------- rendering ----------
+  function hintValue(k) {
+    const m = st.m;
+    if (k === 'genre') return (m.g && m.g.length) ? m.g.join(', ') : 'Unknown';
+    if (k === 'year') return m.y ? String(m.y) : 'Unknown';
+    if (k === 'director') return (m.d && m.d.length) ? m.d.join(' & ') : 'Unknown';
+    if (k === 'letters') return pattern(m.t);
+  }
+
+  function render(fresh) {
+    $('#score').textContent = st.score;
+    $('#left').textContent = MAX_GUESSES - st.wrong.length;
+
+    const castEl = $('#cast'); castEl.innerHTML = '';
+    st.cast.forEach((name, i) => {
+      const li = document.createElement('li');
+      const n = document.createElement('span'); n.className = 'n'; n.textContent = i + 1;
+      const t = document.createElement('span');
+      if (i < st.revealed) {
+        li.className = 'on'; t.textContent = name;
+        if (!fresh && i !== st.revealed - 1) li.style.animation = 'none';
+      } else if (st.over) {
+        li.className = 'late'; t.textContent = name;
+      } else {
+        li.className = 'hidden'; t.textContent = 'Hidden Actor';
+      }
+      li.append(n, t); castEl.append(li);
+    });
+
+    document.querySelectorAll('.hint').forEach(b => {
+      const k = b.dataset.k, used = !!st.hints[k] || st.over;
+      b.classList.toggle('used', used);
+      b.classList.toggle('full', k === 'letters' && used && st.m.t.length > 14);
+      const v = b.querySelector('.v');
+      v.className = 'v' + (k === 'letters' && used ? ' pattern' : '');
+      v.textContent = used ? hintValue(k) : 'Tap to reveal';
+    });
+
+    const wr = $('#wrong'); wr.innerHTML = '';
+    st.wrong.forEach(w => { const s = document.createElement('span'); s.textContent = w; wr.append(s); });
+
+    $('#guess').disabled = st.over; $('#guessBtn').disabled = st.over;
+    $('#giveUp').style.visibility = st.over ? 'hidden' : 'visible';
+  }
+
+  // ---------- gameplay ----------
+  function isMatch(n) {
+    const m = st.m;
+    return [m.t, m.o, ...(m.a || [])].filter(Boolean).some(t => norm(t) === n);
+  }
+
+  function submitGuess(text) {
+    if (st.over) return;
+    const raw = text.trim(); const n = norm(raw);
+    if (!n) return;
+    $('#suggest').innerHTML = '';
+    if (st.wrong.some(w => norm(w) === n)) { toast('Already guessed that one'); return; }
+    if (isMatch(n)) { $('#guess').value = ''; return endGame(true); }
+
+    st.wrong.push(raw);
+    st.score = Math.max(0, st.score - WRONG_COST);
+    $('#guess').value = '';
+    const form = $('#guessForm'); form.classList.remove('shake'); void form.offsetWidth; form.classList.add('shake');
+    if (st.wrong.length >= MAX_GUESSES) { render(); return endGame(false); }
+    const prev = st.revealed;
+    st.revealed = Math.min(st.revealed + 1, st.cast.length);
+    toast(st.revealed > prev ? `Nope! −${WRONG_COST}. Next actor revealed` : `Nope! −${WRONG_COST}`);
+    render();
+  }
+
+  function useHint(k) {
+    if (st.over || st.hints[k]) return;
+    st.hints[k] = true;
+    st.score = Math.max(0, st.score - HINT_COST);
+    render();
+  }
+
+  async function endGame(win) {
+    st.over = true; st.win = win;
+    if (!win) st.score = 0;
+    st.revealed = win ? st.revealed : st.revealed;
+    render();
+
+    const s = store.get('cc_stats', { played: 0, wins: 0, streak: 0, bestStreak: 0, best: 0, total: 0 });
+    s.played++; s.total += st.score;
+    if (win) { s.wins++; s.streak++; s.bestStreak = Math.max(s.bestStreak, s.streak); s.best = Math.max(s.best, st.score); }
+    else s.streak = 0;
+    store.set('cc_stats', s);
+
+    const m = st.m;
+    $('#endTitle').textContent = m.t;
+    $('#endMeta').textContent = [m.y, (m.d || []).join(' & '), (m.g || []).slice(0, 3).join(', ')].filter(Boolean).join(' · ');
+    const r = $('#endResult');
+    r.className = 'result ' + (win ? 'win' : 'lose');
+    r.textContent = win
+      ? (st.wrong.length === 0 ? 'First try! 🎬' : `Got it in ${st.wrong.length + 1} guesses!`)
+      : 'Out of luck this time';
+    $('#endScore').textContent = st.score + ' pts';
+    const ec = $('#endCast'); ec.innerHTML = '';
+    st.cast.forEach((c, i) => { const li = document.createElement('li'); li.textContent = c; if (i >= st.revealed) li.className = 'missed'; ec.append(li); });
+    $('#statLine').textContent = `Played ${s.played} · Won ${Math.round(100 * s.wins / s.played)}% · Streak ${s.streak} · Best ${s.best}`;
+    $('#posterCredit').innerHTML = '';
+
+    const poster = $('#poster');
+    poster.innerHTML = '<div class="spinner"></div>';
+    setTimeout(() => $('#end').classList.remove('hide'), win ? 250 : 500);
+
+    const p = await posterPromise;
+    if (st.m !== m) return;
+    const fallback = () => { poster.innerHTML = ''; const d = document.createElement('div'); d.className = 'ph'; d.textContent = m.t; poster.append(d); };
+    if (p && p.src) {
+      const img = new Image(); img.alt = m.t + ' poster'; img.referrerPolicy = 'no-referrer';
+      img.onload = () => { poster.innerHTML = ''; poster.append(img); };
+      img.onerror = fallback;
+      img.src = p.src;
+      if (p.page) { const a = document.createElement('a'); a.href = p.page; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Poster via Wikipedia'; $('#posterCredit').append(a); }
+    } else fallback();
+  }
+
+  // ---------- posters (Wikipedia / Wikidata, no API key needed) ----------
+  async function getJSON(url) {
+    const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 7000);
+    try { const r = await fetch(url, { signal: ctrl.signal }); return r.ok ? await r.json() : null; }
+    catch { return null; } finally { clearTimeout(t); }
+  }
+
+  async function wikiTitleFromImdb(id) {
+    const api = 'https://www.wikidata.org/w/api.php?format=json&origin=*';
+    const s = await getJSON(`${api}&action=query&list=search&srlimit=1&srsearch=${encodeURIComponent('haswbstatement:P345=' + id)}`);
+    const q = s && s.query && s.query.search && s.query.search[0] && s.query.search[0].title;
+    if (!q) return null;
+    const e = await getJSON(`${api}&action=wbgetentities&props=sitelinks&sitefilter=enwiki&ids=${q}`);
+    const link = e && e.entities && e.entities[q] && e.entities[q].sitelinks && e.entities[q].sitelinks.enwiki;
+    return link ? link.title : null;
+  }
+
+  async function findPoster(m) {
+    const exact = [];
+    if (m.w) exact.push(m.w);
+    if (m.id) { const t = await wikiTitleFromImdb(m.id); if (t) exact.push(t); }
+    const guesses = [`${m.t} (${m.y} film)`, `${m.t} (film)`, m.t];
+    const tries = [...exact.map(t => [t, true]), ...guesses.map(t => [t, false])];
+    for (const [title, trusted] of tries) {
+      const j = await getJSON('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(title.replace(/ /g, '_')));
+      if (!j || j.type === 'disambiguation') continue;
+      if (!trusted && !/\b(film|movie)\b/i.test((j.description || '') + ' ' + (j.extract || '').slice(0, 200))) continue;
+      const img = (j.originalimage || j.thumbnail || {}).source;
+      if (!img) continue;
+      return { src: img, page: j.content_urls && j.content_urls.desktop && j.content_urls.desktop.page };
+    }
+    return null;
+  }
+
+  // ---------- suggestions ----------
+  function suggest() {
+    const box = $('#suggest'); box.innerHTML = '';
+    const q = norm($('#guess').value);
+    if (q.length < 2 || st.over) return;
+    const starts = [], contains = [];
+    for (const t of titleIndex) {
+      if (t.n.startsWith(q)) starts.push(t);
+      else if (t.n.includes(q)) contains.push(t);
+      if (starts.length >= 6) break;
+    }
+    const guessed = new Set(st.wrong.map(norm));
+    [...starts, ...contains].filter(t => !guessed.has(t.n)).slice(0, 6).forEach(t => {
+      const li = document.createElement('li'); const b = document.createElement('button');
+      b.type = 'button'; b.textContent = t.label;
+      b.addEventListener('pointerdown', e => e.preventDefault());
+      b.addEventListener('click', () => { $('#guess').value = t.label; box.innerHTML = ''; $('#guess').focus(); });
+      li.append(b); box.append(li);
+    });
+  }
+
+  // ---------- wiring ----------
+  $('#guessForm').addEventListener('submit', e => { e.preventDefault(); submitGuess($('#guess').value); });
+  $('#guess').addEventListener('input', suggest);
+  $('#guess').addEventListener('blur', () => setTimeout(() => { $('#suggest').innerHTML = ''; }, 150));
+  $('#hints').addEventListener('click', e => { const b = e.target.closest('.hint'); if (b) useHint(b.dataset.k); });
+  $('#giveUp').addEventListener('click', () => { if (!st.over && confirm('Give up and reveal the movie?')) endGame(false); });
+  $('#again').addEventListener('click', newGame);
+  $('#helpBtn').addEventListener('click', () => $('#help').classList.remove('hide'));
+  $('#helpClose').addEventListener('click', () => { $('#help').classList.add('hide'); store.set('cc_seen', true); });
+
+  if (!MOVIES.length) {
+    document.querySelector('.wrap').innerHTML = '<div class="card">No movie data found. Make sure <b>movies.js</b> is next to index.html.</div>';
+    return;
+  }
+  newGame();
+  if (!store.get('cc_seen', false)) $('#help').classList.remove('hide');
+})();
+</script>
+</body>
+</html>
