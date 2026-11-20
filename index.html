@@ -25,7 +25,7 @@
   button{font:inherit;color:inherit;cursor:pointer;border:0}
   .wrap{max-width:640px;margin:0 auto;padding:12px 16px 40px}
 
-  header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0 14px}
+  header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 12px;padding:8px 0 14px}
   h1{font-family:"Bebas Neue",Impact,sans-serif;font-weight:400;font-size:40px;letter-spacing:1px;margin:0;line-height:1}
   h1 span{color:var(--gold)}
   .stats{display:flex;gap:8px;align-items:center}
@@ -49,11 +49,12 @@
   @keyframes pop{0%{transform:scale(.92);opacity:.3}100%{transform:scale(1);opacity:1}}
 
   form.guess{display:flex;gap:8px;position:relative}
-  .field{flex:1;position:relative}
+  .field{flex:1;position:relative;min-width:0}
   #guess{width:100%;height:52px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:0 14px;font-size:17px;outline:none}
   #guess:focus{border-color:var(--gold)}
   .btn{height:52px;padding:0 20px;border-radius:12px;background:var(--gold);color:var(--gold-ink);font-weight:700;font-size:16px}
   .btn:disabled{opacity:.4}
+  .btn.ghost{background:var(--panel2);color:var(--text);border:1px solid var(--line);padding:0 14px}
   #suggest{position:absolute;left:0;right:0;bottom:calc(100% + 6px);list-style:none;margin:0;padding:6px;background:#2c2738;border:1px solid var(--line);border-radius:12px;box-shadow:0 -10px 30px rgba(0,0,0,.45);z-index:5;max-height:300px;overflow:auto}
   #suggest:empty{display:none}
   #suggest button{display:block;width:100%;text-align:left;background:none;padding:12px 10px;border-radius:8px;font-size:16px}
@@ -73,6 +74,7 @@
 
   .wrong{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 12px}
   .wrong span{background:rgba(255,90,110,.12);color:#ff9aa7;border:1px solid rgba(255,90,110,.35);border-radius:999px;padding:5px 11px;font-size:13px;text-decoration:line-through}
+  .wrong span.skip{background:var(--panel);color:var(--muted);border-color:var(--line);text-decoration:none;font-style:italic}
   .link{background:none;color:var(--muted);text-decoration:underline;font-size:14px;padding:8px;display:block;margin:0 auto}
 
   .overlay{position:fixed;inset:0;background:rgba(5,4,8,.78);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:20}
@@ -107,6 +109,7 @@
     .hints{grid-template-columns:repeat(4,1fr)}
     .hint.full{grid-column:1 / -1}
   }
+  @media (max-width:380px){ .btn{padding:0 14px} .btn.ghost{padding:0 10px} .pill{padding:5px 8px} .pill small{letter-spacing:.03em} }
   @media (max-width:360px){ .cast{grid-template-columns:1fr} h1{font-size:32px} .pill{min-width:62px} }
 </style>
 </head>
@@ -133,6 +136,7 @@
              autocapitalize="words" autocorrect="off" spellcheck="false" aria-label="Your guess">
     </div>
     <button class="btn" id="guessBtn" type="submit">Guess</button>
+    <button class="btn ghost" id="skipBtn" type="button" aria-label="Skip this guess and reveal the next actor">Skip</button>
   </form>
 
   <div class="wrong" id="wrong"></div>
@@ -171,7 +175,7 @@
       <li>A random movie is picked and its <b>top 10 billed actors</b> are hidden.</li>
       <li>The <b>lowest-billed</b> actor is revealed first. Guess the movie!</li>
       <li>You start with <b>1000 points</b> and get <b>10 guesses</b>.</li>
-      <li>Each wrong guess costs <b>100 points</b> and reveals the next actor up the list. The <b>#1 billed star</b> is revealed last.</li>
+      <li>Each wrong guess, or tapping <b>Skip</b> when you're stumped, costs <b>100 points</b> and reveals the next actor up the list. The <b>#1 billed star</b> is revealed last.</li>
       <li>Hints cost <b>50 points</b> each: genre, release year, director, or the title's letter pattern (e.g. <span class="pattern">*** **********</span>).</li>
       <li>Win or lose, the poster is revealed at the end.</li>
     </ol>
@@ -280,9 +284,9 @@
     });
 
     const wr = $('#wrong'); wr.innerHTML = '';
-    st.wrong.forEach(w => { const s = document.createElement('span'); s.textContent = w; wr.append(s); });
+    st.wrong.forEach(w => { const s = document.createElement('span'); if (w === null) { s.className = 'skip'; s.textContent = 'Skipped'; } else s.textContent = w; wr.append(s); });
 
-    $('#guess').disabled = st.over; $('#guessBtn').disabled = st.over;
+    $('#guess').disabled = st.over; $('#guessBtn').disabled = st.over; $('#skipBtn').disabled = st.over;
     $('#giveUp').style.visibility = st.over ? 'hidden' : 'visible';
   }
 
@@ -297,17 +301,24 @@
     const raw = text.trim(); const n = norm(raw);
     if (!n) return;
     $('#suggest').innerHTML = '';
-    if (st.wrong.some(w => norm(w) === n)) { toast('Already guessed that one'); return; }
+    if (st.wrong.some(w => w !== null && norm(w) === n)) { toast('Already guessed that one'); return; }
     if (isMatch(n)) { $('#guess').value = ''; return endGame(true); }
+    miss(raw);
+  }
 
-    st.wrong.push(raw);
+  // A wrong guess or a skip (entry === null): uses a guess, costs points, reveals the next actor.
+  function miss(entry) {
+    st.wrong.push(entry);
     st.score = Math.max(0, st.score - WRONG_COST);
-    $('#guess').value = '';
-    const form = $('#guessForm'); form.classList.remove('shake'); void form.offsetWidth; form.classList.add('shake');
+    if (entry !== null) {
+      $('#guess').value = '';
+      const form = $('#guessForm'); form.classList.remove('shake'); void form.offsetWidth; form.classList.add('shake');
+    }
     if (st.wrong.length >= MAX_GUESSES) { render(); return endGame(false); }
     const prev = st.revealed;
     st.revealed = Math.min(st.revealed + 1, st.cast.length);
-    toast(st.revealed > prev ? `Nope! −${WRONG_COST}. Next actor revealed` : `Nope! −${WRONG_COST}`);
+    const what = entry === null ? 'Skipped' : 'Nope!';
+    toast(st.revealed > prev ? `${what} −${WRONG_COST}. Next actor revealed` : `${what} −${WRONG_COST}`);
     render();
   }
 
@@ -404,7 +415,7 @@
       else if (t.n.includes(q)) contains.push(t);
       if (starts.length >= 6) break;
     }
-    const guessed = new Set(st.wrong.map(norm));
+    const guessed = new Set(st.wrong.filter(w => w !== null).map(norm));
     [...starts, ...contains].filter(t => !guessed.has(t.n)).slice(0, 6).forEach(t => {
       const li = document.createElement('li'); const b = document.createElement('button');
       b.type = 'button'; b.textContent = t.label;
@@ -416,6 +427,7 @@
 
   // ---------- wiring ----------
   $('#guessForm').addEventListener('submit', e => { e.preventDefault(); submitGuess($('#guess').value); });
+  $('#skipBtn').addEventListener('click', () => { if (!st.over) { $('#suggest').innerHTML = ''; miss(null); } });
   $('#guess').addEventListener('input', suggest);
   $('#guess').addEventListener('blur', () => setTimeout(() => { $('#suggest').innerHTML = ''; }, 150));
   $('#hints').addEventListener('click', e => { const b = e.target.closest('.hint'); if (b) useHint(b.dataset.k); });
